@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Noteman Clipper",
+  "description": "Capture selected text and save to Notion via Noteman",
+  "version": "1.0.0",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["html-to-markdown.js", "content.js"]
+    }
+  ],
+  "commands": {
+    "capture-selection": {
+      "suggested_key": {
+        "default": "Alt+N",
+        "mac": "MacCtrl+N"
+      },
+      "description": "Capture selection and open Noteman popup"
+    }
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -4,16 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Noteman is a Cloudflare Worker app (using Hono framework) that inserts markdown content into Notion pages. It provides a web UI for selecting destination pages and entering markdown that gets converted to Notion blocks.
+Noteman consists of a Cloudflare Worker backend and a Chrome extension. The Worker (using Hono framework) inserts markdown content into Notion pages via a web UI. The Chrome extension allows capturing selected text from any webpage and sending it to Notion via the backend.
 
 ## Commands
 
+### Worker (root directory)
 - `npm run dev` - Start local dev server with wrangler
 - `npm run deploy` - Deploy to Cloudflare Workers
 - `npm test -- --run` - Run tests once (do NOT use `npm test` alone as it enters watch mode)
 - `npx wrangler d1 migrations apply noteman-db` - Apply database migrations
 
+### Extension (extension/ directory)
+- `cd extension && npm install` - Install extension dev dependencies
+- `cd extension && npm test` - Run extension tests
+
 ## Architecture
+
+### Chrome Extension (extension/)
+- `manifest.json` - Extension configuration (Manifest V3)
+- `background.js` - Service worker for keyboard shortcut handling
+- `content.js` - Overlay UI for page selection and text capture
+- `html-to-markdown.js` - Converts HTML selections to markdown
+- `options.html/js` - Settings page for backend URL configuration
 
 ### Entry Point & Routing
 - `src/index.ts` - Hono app entry, mounts route modules at `/api` and `/`

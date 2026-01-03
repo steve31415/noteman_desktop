@@ -1,0 +1,12 @@
+{
+  "name": "noteman-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension to capture selected text and save to Notion via Noteman",
+  "private": true,
+  "scripts": {
+    "test": "node test/html-to-markdown.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
