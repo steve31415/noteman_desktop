@@ -113,4 +113,62 @@ print("hello")
       'code',
     ]);
   });
+
+  it('converts indented blockquote under bullet item', () => {
+    const markdown = `- [Page Title](https://example.com)
+  > This is quoted text`;
+    const blocks = markdownToBlocks(markdown);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('bulleted_list_item');
+
+    const listItem = blocks[0] as any;
+    expect(listItem.bulleted_list_item.children).toHaveLength(1);
+    expect(listItem.bulleted_list_item.children[0].type).toBe('quote');
+    expect(listItem.bulleted_list_item.children[0].quote.rich_text[0].text.content).toBe('This is quoted text');
+  });
+
+  it('converts multi-line indented blockquote under bullet item', () => {
+    const markdown = `- [Page Title](https://example.com)
+  > First quoted line
+  > Second quoted line`;
+    const blocks = markdownToBlocks(markdown);
+    expect(blocks).toHaveLength(1);
+
+    const listItem = blocks[0] as any;
+    expect(listItem.bulleted_list_item.children[0].quote.rich_text[0].text.content).toBe(
+      'First quoted line\nSecond quoted line'
+    );
+  });
+
+  it('handles bullet items with and without nested quotes', () => {
+    const markdown = `- First item with quote
+  > Quoted under first
+- Second item no quote
+- Third item with quote
+  > Quoted under third`;
+    const blocks = markdownToBlocks(markdown);
+    expect(blocks).toHaveLength(3);
+
+    // First item has nested quote
+    expect((blocks[0] as any).bulleted_list_item.children).toHaveLength(1);
+
+    // Second item has no children
+    expect((blocks[1] as any).bulleted_list_item.children).toBeUndefined();
+
+    // Third item has nested quote
+    expect((blocks[2] as any).bulleted_list_item.children).toHaveLength(1);
+  });
+
+  it('preserves link formatting in bullet item with nested quote', () => {
+    const markdown = `- [Example Page](https://example.com)
+  > Some quoted content`;
+    const blocks = markdownToBlocks(markdown);
+
+    const listItem = blocks[0] as any;
+    const richText = listItem.bulleted_list_item.rich_text;
+
+    // Should have the link
+    expect(richText.some((rt: any) => rt.text.link?.url === 'https://example.com')).toBe(true);
+    expect(richText.some((rt: any) => rt.text.content === 'Example Page')).toBe(true);
+  });
 });

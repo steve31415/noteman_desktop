@@ -99,16 +99,40 @@ export function markdownToBlocks(markdown: string): BlockObjectRequest[] {
 
     // Bullet list (- or * )
     if (/^[-*]\s/.test(line)) {
-      const items: string[] = [];
+      // Parse bullet items one at a time, checking for nested content
       while (i < lines.length && /^[-*]\s/.test(lines[i])) {
-        items.push(lines[i].slice(2));
+        const itemText = lines[i].slice(2);
         i++;
-      }
-      for (const item of items) {
-        blocks.push({
-          type: 'bulleted_list_item',
-          bulleted_list_item: { rich_text: parseInlineFormatting(item) },
-        });
+
+        // Check for indented blockquotes following this item (  > content)
+        const nestedQuoteLines: string[] = [];
+        while (i < lines.length && /^\s+>\s?/.test(lines[i])) {
+          // Extract the content after the indented > marker
+          const quoteContent = lines[i].replace(/^\s+>\s?/, '');
+          nestedQuoteLines.push(quoteContent);
+          i++;
+        }
+
+        if (nestedQuoteLines.length > 0) {
+          // Create bullet item with nested quote block as child
+          blocks.push({
+            type: 'bulleted_list_item',
+            bulleted_list_item: {
+              rich_text: parseInlineFormatting(itemText),
+              children: [
+                {
+                  type: 'quote',
+                  quote: { rich_text: parseInlineFormatting(nestedQuoteLines.join('\n')) },
+                },
+              ],
+            },
+          } as BlockObjectRequest);
+        } else {
+          blocks.push({
+            type: 'bulleted_list_item',
+            bulleted_list_item: { rich_text: parseInlineFormatting(itemText) },
+          });
+        }
       }
       continue;
     }
