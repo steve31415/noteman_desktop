@@ -129,6 +129,20 @@ export function markdownToBlocks(markdown: string): BlockObjectRequest[] {
       continue;
     }
 
+    // Blockquote (> )
+    if (line.startsWith('> ')) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && lines[i].startsWith('> ')) {
+        quoteLines.push(lines[i].slice(2));
+        i++;
+      }
+      blocks.push({
+        type: 'quote',
+        quote: { rich_text: parseInlineFormatting(quoteLines.join('\n')) },
+      } as BlockObjectRequest);
+      continue;
+    }
+
     // Regular paragraph - collect consecutive non-special lines
     const paragraphLines: string[] = [];
     while (
@@ -136,6 +150,7 @@ export function markdownToBlocks(markdown: string): BlockObjectRequest[] {
       lines[i].trim() !== '' &&
       !lines[i].startsWith('#') &&
       !lines[i].startsWith('```') &&
+      !lines[i].startsWith('> ') &&
       !/^[-*]\s/.test(lines[i]) &&
       !/^\d+\.\s/.test(lines[i])
     ) {
