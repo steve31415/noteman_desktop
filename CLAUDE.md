@@ -38,3 +38,32 @@ Noteman is a Cloudflare Worker app (using Hono framework) that inserts markdown 
 
 - `NOTION_TOKEN` - Notion integration token (set in wrangler.toml secrets or env)
 - `DB` - D1 database binding configured in wrangler.toml
+
+## Data Safety (CRITICAL)
+
+**Design priority: This app must never damage or corrupt Notion content.**
+
+### Current safety properties
+
+The Notion integration is intentionally append-only:
+
+**Allowed operations:**
+- `pages.retrieve()` - read page metadata
+- `blocks.children.list()` - read page contents
+- `blocks.children.append()` - add new blocks to a page
+
+**Forbidden operations (not implemented by design):**
+- `blocks.delete()` - deleting content
+- `blocks.update()` - modifying existing content
+- `pages.update()` - modifying page properties
+- `pages.archive()` / deletion operations
+- Any page moving or reorganizing operations
+
+### Requirements for changes
+
+**You MUST consult me before making any changes that would:**
+- Add any Notion API calls beyond the read and append operations listed above
+- Introduce block deletion, modification, or page mutation capabilities
+- Change how page IDs are resolved or passed (risk of operating on wrong page)
+- Add bulk operations that could affect multiple pages
+- Introduce any other operations that could damage or lose existing data
