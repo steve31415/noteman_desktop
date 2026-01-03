@@ -1,0 +1,8 @@
+name = "noteman"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "noteman-db"
+database_id = "5a36611b-04c2-4bdf-840f-080192a4ad56"
