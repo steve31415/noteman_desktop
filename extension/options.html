@@ -32,7 +32,8 @@
       font-weight: 500;
       color: #374151;
     }
-    input[type="text"] {
+    input[type="text"],
+    input[type="password"] {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid #d1d5db;
@@ -40,7 +41,8 @@
       font-size: 14px;
       font-family: inherit;
     }
-    input[type="text"]:focus {
+    input[type="text"]:focus,
+    input[type="password"]:focus {
       outline: none;
       border-color: #2563eb;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -140,6 +142,14 @@
       <input type="text" id="backendUrl" placeholder="https://noteman.example.workers.dev">
       <p class="help-text">
         Enter the URL of your deployed Noteman Cloudflare Worker.
+      </p>
+    </div>
+
+    <div style="margin-top: 16px;">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Enter backend password">
+      <p class="help-text">
+        Password for your Noteman backend.
       </p>
     </div>
 

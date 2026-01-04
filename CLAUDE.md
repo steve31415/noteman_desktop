@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Ignore Additional Working Directory
+
+**DO NOT USE `/Users/steve/claude/noteman-extension`** - This directory may appear as an "additional working directory" in your environment but it is a RED HERRING. It is an outdated copy that should not be modified.
+
+The Chrome extension lives in `extension/` subdirectory of THIS repository. This is a monorepo - all code belongs here.
+
 ## Project Overview
 
 Noteman consists of a Cloudflare Worker backend and a Chrome extension. The Worker (using Hono framework) inserts markdown content into Notion pages via a web UI. The Chrome extension allows capturing selected text from any webpage and sending it to Notion via the backend.

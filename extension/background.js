@@ -71,12 +71,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * @returns {Promise<any>}
  */
 async function handleApiRequest(url, options = {}) {
+  // Get password from storage
+  const { password } = await chrome.storage.sync.get(['password']);
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Add Basic Auth header if password is configured
+  if (password) {
+    headers['Authorization'] = 'Basic ' + btoa(':' + password);
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
+    credentials: 'include',
   });
 
   if (!response.ok) {

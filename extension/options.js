@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const urlInput = document.getElementById('backendUrl');
+  const passwordInput = document.getElementById('password');
   const saveBtn = document.getElementById('save');
   const testBtn = document.getElementById('test');
   const status = document.getElementById('status');
@@ -16,16 +17,20 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
   });
 
-  // Load saved URL
-  chrome.storage.sync.get(['backendUrl'], (result) => {
+  // Load saved settings
+  chrome.storage.sync.get(['backendUrl', 'password'], (result) => {
     if (result.backendUrl) {
       urlInput.value = result.backendUrl;
     }
+    if (result.password) {
+      passwordInput.value = result.password;
+    }
   });
 
-  // Save URL
+  // Save settings
   saveBtn.addEventListener('click', async () => {
     const url = normalizeUrl(urlInput.value);
+    const password = passwordInput.value;
 
     if (!url) {
       showStatus('Please enter a URL', 'error');
@@ -41,15 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
     saveBtn.disabled = true;
 
     try {
-      const isValid = await testBackendConnection(url);
+      const isValid = await testBackendConnection(url, password);
       if (!isValid) {
-        showStatus('Could not connect to backend. Check the URL and try again.', 'error');
+        showStatus('Could not connect to backend. Check the URL and password.', 'error');
         saveBtn.disabled = false;
         return;
       }
 
-      // Save the URL
-      chrome.storage.sync.set({ backendUrl: url }, () => {
+      // Save URL and password
+      chrome.storage.sync.set({ backendUrl: url, password: password }, () => {
         showStatus('Settings saved successfully!', 'success');
         saveBtn.disabled = false;
       });
@@ -62,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Test connection without saving
   testBtn.addEventListener('click', async () => {
     const url = normalizeUrl(urlInput.value);
+    const password = passwordInput.value;
 
     if (!url) {
       showStatus('Please enter a URL first', 'error');
@@ -77,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     testBtn.disabled = true;
 
     try {
-      const isValid = await testBackendConnection(url);
+      const isValid = await testBackendConnection(url, password);
       if (isValid) {
         showStatus('Connection successful! Backend is reachable.', 'success');
       } else {
@@ -116,14 +122,21 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Test connection to the backend by calling the recent-pages API.
    * @param {string} url
+   * @param {string} password
    * @returns {Promise<boolean>}
    */
-  async function testBackendConnection(url) {
+  async function testBackendConnection(url, password) {
+    const headers = {
+      'Accept': 'application/json',
+    };
+
+    if (password) {
+      headers['Authorization'] = 'Basic ' + btoa(':' + password);
+    }
+
     const response = await fetch(`${url}/api/recent-pages`, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers: headers,
     });
 
     if (!response.ok) {
