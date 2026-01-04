@@ -118,6 +118,17 @@ function showOverlay(content) {
   shadow.appendChild(overlay);
   document.body.appendChild(overlayRoot);
 
+  // Capture all keyboard events to prevent leaking to underlying page
+  overlay.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+  }, true);
+  overlay.addEventListener('keyup', (e) => {
+    e.stopPropagation();
+  }, true);
+  overlay.addEventListener('keypress', (e) => {
+    e.stopPropagation();
+  }, true);
+
   // Initialize event handlers
   initializeOverlay(shadow);
 }
