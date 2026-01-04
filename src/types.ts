@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   NOTION_TOKEN: string;
+  AUTH_PASSWORD: string;
 }
 
 export interface PageInfo {

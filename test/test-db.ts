@@ -9,10 +9,17 @@ import path from 'path';
 export function createTestDb(): D1Database {
   const db = new Database(':memory:');
 
-  // Apply migrations
-  const migrationPath = path.join(process.cwd(), 'migrations', '001_initial.sql');
-  const migration = fs.readFileSync(migrationPath, 'utf-8');
-  db.exec(migration);
+  // Apply all migrations in order
+  const migrationsDir = path.join(process.cwd(), 'migrations');
+  const migrationFiles = fs
+    .readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+
+  for (const file of migrationFiles) {
+    const migration = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+    db.exec(migration);
+  }
 
   // Return D1-compatible interface
   return {
@@ -29,7 +36,10 @@ export function createTestDb(): D1Database {
       db.exec(sql);
       return Promise.resolve({ count: 0, duration: 0 });
     },
-  } as D1Database;
+    withSession() {
+      throw new Error('Not implemented');
+    },
+  } as unknown as D1Database;
 }
 
 function createStatement(db: Database.Database, sql: string) {
@@ -81,11 +91,11 @@ function createStatement(db: Database.Database, sql: string) {
         },
       };
     },
-    async raw<T>(): Promise<T[]> {
+    async raw<T>(options?: { columnNames?: boolean }): Promise<T[]> {
       const statement = db.prepare(sql);
       return statement.raw().all(...boundParams) as T[];
     },
-  };
+  } as unknown as D1PreparedStatement;
 
   return stmt;
 }
