@@ -104,6 +104,19 @@ export function markdownToBlocks(markdown: string): BlockObjectRequest[] {
         const itemText = lines[i].slice(2);
         i++;
 
+        // Check for nested content (indented bullets or blockquotes)
+        const children: BlockObjectRequest[] = [];
+
+        // Check for indented bullets (  - item or  * item)
+        while (i < lines.length && /^\s{2,}[-*]\s/.test(lines[i])) {
+          const subItemText = lines[i].replace(/^\s{2,}[-*]\s/, '');
+          children.push({
+            type: 'bulleted_list_item',
+            bulleted_list_item: { rich_text: parseInlineFormatting(subItemText) },
+          });
+          i++;
+        }
+
         // Check for indented blockquotes following this item (  > content)
         const nestedQuoteLines: string[] = [];
         while (i < lines.length && /^\s+>\s?/.test(lines[i])) {
@@ -114,17 +127,19 @@ export function markdownToBlocks(markdown: string): BlockObjectRequest[] {
         }
 
         if (nestedQuoteLines.length > 0) {
-          // Create bullet item with nested quote block as child
+          children.push({
+            type: 'quote',
+            quote: { rich_text: parseInlineFormatting(nestedQuoteLines.join('\n')) },
+          });
+        }
+
+        if (children.length > 0) {
+          // Create bullet item with nested children
           blocks.push({
             type: 'bulleted_list_item',
             bulleted_list_item: {
               rich_text: parseInlineFormatting(itemText),
-              children: [
-                {
-                  type: 'quote',
-                  quote: { rich_text: parseInlineFormatting(nestedQuoteLines.join('\n')) },
-                },
-              ],
+              children,
             },
           } as BlockObjectRequest);
         } else {
