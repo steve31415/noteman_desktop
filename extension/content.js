@@ -118,10 +118,8 @@ function showOverlay(content) {
   shadow.appendChild(overlay);
   document.body.appendChild(overlayRoot);
 
-  // Capture all keyboard events to prevent leaking to underlying page
-  overlay.addEventListener('keydown', (e) => {
-    e.stopPropagation();
-  }, true);
+  // Capture keyup/keypress to prevent leaking to underlying page
+  // (keydown is handled in initializeOverlay with shortcuts)
   overlay.addEventListener('keyup', (e) => {
     e.stopPropagation();
   }, true);
@@ -289,41 +287,67 @@ async function initializeOverlay(shadow) {
     updateSuggestions();
   });
 
-  destinationInput.addEventListener('keydown', (e) => {
+  // Capture-phase keyboard handler for all shortcuts
+  // This runs before stopPropagation would block bubble-phase handlers
+  const overlay = shadow.getElementById('noteman-overlay');
+  overlay.addEventListener('keydown', (e) => {
+    const isDestinationFocused = document.activeElement === overlayRoot &&
+      shadow.activeElement === destinationInput;
+    const isContentFocused = document.activeElement === overlayRoot &&
+      shadow.activeElement === contentTextarea;
     const suggestions = suggestionsDiv.querySelectorAll('.noteman-suggestion');
+    const dropdownVisible = suggestionsDiv.style.display !== 'none';
 
-    // Handle digit keys 1-9 to select entries
-    if (e.key >= '1' && e.key <= '9' && suggestionsDiv.style.display !== 'none') {
-      const index = parseInt(e.key) - 1;
-      if (index < currentFilteredPages.length) {
-        e.preventDefault();
-        const page = currentFilteredPages[index];
-        selectPage(page.id, page.title);
-        return;
+    // Escape always closes the overlay
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeOverlay();
+      e.stopPropagation();
+      return;
+    }
+
+    // Cmd/Ctrl+Enter in content textarea submits
+    if (isContentFocused && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submitBtn.click();
+      e.stopPropagation();
+      return;
+    }
+
+    // Destination input keyboard handling
+    if (isDestinationFocused) {
+      // Digit keys 1-9 to select entries
+      if (e.key >= '1' && e.key <= '9' && dropdownVisible) {
+        const index = parseInt(e.key) - 1;
+        if (index < currentFilteredPages.length) {
+          e.preventDefault();
+          const page = currentFilteredPages[index];
+          selectPage(page.id, page.title);
+          e.stopPropagation();
+          return;
+        }
+      }
+
+      if (suggestions.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+          updateSelectedClass();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectedIndex = Math.max(selectedIndex - 1, 0);
+          updateSelectedClass();
+        } else if (e.key === 'Enter' && selectedIndex >= 0) {
+          e.preventDefault();
+          const sel = suggestions[selectedIndex];
+          selectPage(sel.dataset.id, sel.dataset.title);
+        }
       }
     }
 
-    if (suggestions.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
-      updateSelectedClass();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      selectedIndex = Math.max(selectedIndex - 1, 0);
-      updateSelectedClass();
-    } else if (e.key === 'Enter' && selectedIndex >= 0) {
-      e.preventDefault();
-      const sel = suggestions[selectedIndex];
-      selectPage(sel.dataset.id, sel.dataset.title);
-    } else if (e.key === 'Escape') {
-      if (suggestionsDiv.style.display !== 'none') {
-        suggestionsDiv.style.display = 'none';
-        e.stopPropagation();
-      }
-    }
-  });
+    // Always stop propagation to prevent leaking to underlying page
+    e.stopPropagation();
+  }, true);
 
   suggestionsDiv.addEventListener('click', (e) => {
     const suggestion = e.target.closest('.noteman-suggestion');
@@ -344,22 +368,6 @@ async function initializeOverlay(shadow) {
   closeBtn.addEventListener('click', closeOverlay);
   backdrop.addEventListener('click', closeOverlay);
 
-  // Escape key to close
-  function escHandler(e) {
-    if (e.key === 'Escape') {
-      closeOverlay();
-      document.removeEventListener('keydown', escHandler);
-    }
-  }
-  document.addEventListener('keydown', escHandler);
-
-  // Cmd+Enter / Ctrl+Enter to submit from content textarea
-  contentTextarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      submitBtn.click();
-    }
-  });
 
   // Submit handler
   submitBtn.addEventListener('click', async () => {

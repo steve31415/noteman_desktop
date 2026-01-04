@@ -106,6 +106,18 @@ home.get('/', (c) => {
         }
         .suggestion .badge.recent { background: #e0e7ff; color: #3730a3; }
         .suggestion .badge.whitelist { background: #dcfce7; color: #166534; }
+        .suggestion .number {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 18px;
+          background: #e5e7eb;
+          color: #374151;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+        }
 
         button[type="submit"] {
           background: #2563eb;
@@ -164,7 +176,7 @@ home.get('/', (c) => {
         <form id="noteForm">
           <div class="field">
             <label for="destination">Destination</label>
-            <input type="text" id="destination" autocomplete="off" placeholder="Start typing to search pages...">
+            <input type="text" id="destination" autocomplete="off" autofocus placeholder="Start typing to search pages...">
             <input type="hidden" id="pageId">
             <div id="suggestions" class="suggestions"></div>
           </div>
@@ -254,14 +266,16 @@ home.get('/', (c) => {
         }
 
         function renderSuggestions(pages) {
-          suggestionsDiv.innerHTML = pages.map((page, i) =>
-            '<div class="suggestion' + (i === selectedIndex ? ' selected' : '') + '" ' +
-            'data-id="' + escapeHtml(page.id) + '" ' +
-            'data-title="' + escapeHtml(page.title) + '">' +
-            '<span class="badge ' + page.source + '">' + page.source + '</span> ' +
-            escapeHtml(page.title) +
-            '</div>'
-          ).join('');
+          suggestionsDiv.innerHTML = pages.map((page, i) => {
+            const number = i < 9 ? '<span class="number">' + (i + 1) + '</span>' : '';
+            return '<div class="suggestion' + (i === selectedIndex ? ' selected' : '') + '" ' +
+              'data-id="' + escapeHtml(page.id) + '" ' +
+              'data-title="' + escapeHtml(page.title) + '">' +
+              number +
+              '<span class="badge ' + page.source + '">' + page.source + '</span> ' +
+              escapeHtml(page.title) +
+              '</div>';
+          }).join('');
           suggestionsDiv.style.display = 'block';
         }
 
@@ -304,6 +318,14 @@ home.get('/', (c) => {
           } else if (e.key === 'Escape') {
             suggestionsDiv.style.display = 'none';
             selectedIndex = -1;
+          } else if (e.key >= '1' && e.key <= '9') {
+            const idx = parseInt(e.key, 10) - 1;
+            if (idx < suggestions.length) {
+              e.preventDefault();
+              const sel = suggestions[idx];
+              selectPage(sel.dataset.id, sel.dataset.title);
+              document.getElementById('content').focus();
+            }
           }
         });
 
@@ -327,6 +349,14 @@ home.get('/', (c) => {
           if (!e.target.closest('#destination') && !e.target.closest('#suggestions')) {
             suggestionsDiv.style.display = 'none';
             selectedIndex = -1;
+          }
+        });
+
+        // Cmd+Enter in content textarea submits form
+        document.getElementById('content').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && e.metaKey) {
+            e.preventDefault();
+            form.requestSubmit();
           }
         });
 
