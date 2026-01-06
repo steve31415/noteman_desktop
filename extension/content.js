@@ -167,46 +167,10 @@ async function initializeOverlay(shadow) {
     return;
   }
 
-  // Load pages via background script (to avoid CORS issues)
+  // allPages will be populated from cache first, then updated with fresh data
   let allPages = [];
-  try {
-    const [recentResult, searchableResult] = await Promise.all([
-      chrome.runtime.sendMessage({
-        action: 'apiRequest',
-        url: `${backendUrl}/api/recent-pages`
-      }),
-      chrome.runtime.sendMessage({
-        action: 'apiRequest',
-        url: `${backendUrl}/api/searchable-pages`
-      })
-    ]);
 
-    if (!recentResult.success || !searchableResult.success) {
-      throw new Error(recentResult.error || searchableResult.error || 'Failed to load pages');
-    }
-
-    const recentData = recentResult.data;
-    const searchableData = searchableResult.data;
-
-    // Merge: recent first, then searchable (deduplicated)
-    const seen = new Set();
-    for (const p of recentData.pages) {
-      seen.add(p.id);
-      allPages.push({ ...p, source: 'recent' });
-    }
-    for (const p of searchableData.pages) {
-      if (!seen.has(p.id)) {
-        seen.add(p.id);
-        allPages.push({ ...p, source: 'whitelist' });
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load pages:', err);
-    showFeedback(shadow, 'Failed to connect to Noteman backend. Check your settings.', 'error');
-    return;
-  }
-
-  // Get UI elements
+  // Get UI elements (set up UI before loading data so we can populate progressively)
   const destinationInput = shadow.getElementById('noteman-destination');
   const pageIdInput = shadow.getElementById('noteman-page-id');
   const suggestionsDiv = shadow.getElementById('noteman-suggestions');
@@ -423,6 +387,80 @@ async function initializeOverlay(shadow) {
 
   // Focus destination input
   destinationInput.focus();
+
+  // Load cached pages immediately, then fetch fresh data in background
+  const cacheKey = `cachedPages_${backendUrl}`;
+
+  // 1. Load from cache first for instant display
+  try {
+    const cached = await chrome.storage.local.get([cacheKey]);
+    if (cached[cacheKey] && cached[cacheKey].length > 0) {
+      allPages = cached[cacheKey];
+      updateSuggestions();
+    }
+  } catch (err) {
+    console.warn('Failed to load cached pages:', err);
+  }
+
+  // 2. Fetch fresh data in background
+  try {
+    const [recentResult, searchableResult] = await Promise.all([
+      chrome.runtime.sendMessage({
+        action: 'apiRequest',
+        url: `${backendUrl}/api/recent-pages`
+      }),
+      chrome.runtime.sendMessage({
+        action: 'apiRequest',
+        url: `${backendUrl}/api/searchable-pages`
+      })
+    ]);
+
+    if (!recentResult.success || !searchableResult.success) {
+      throw new Error(recentResult.error || searchableResult.error || 'Failed to load pages');
+    }
+
+    const recentData = recentResult.data;
+    const searchableData = searchableResult.data;
+
+    // Merge: recent first, then searchable (deduplicated)
+    const freshPages = [];
+    const seen = new Set();
+    for (const p of recentData.pages) {
+      seen.add(p.id);
+      freshPages.push({ ...p, source: 'recent' });
+    }
+    for (const p of searchableData.pages) {
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        freshPages.push({ ...p, source: 'whitelist' });
+      }
+    }
+
+    // 3. Update cache
+    try {
+      await chrome.storage.local.set({ [cacheKey]: freshPages });
+    } catch (err) {
+      console.warn('Failed to cache pages:', err);
+    }
+
+    // 4. Update dropdown with fresh data, preserving selection
+    const currentSelection = pageIdInput.value;
+    const currentTitle = destinationInput.value;
+    allPages = freshPages;
+    updateSuggestions();
+
+    // Restore selection if user had already selected something
+    if (currentSelection) {
+      pageIdInput.value = currentSelection;
+      destinationInput.value = currentTitle;
+    }
+  } catch (err) {
+    console.error('Failed to load pages:', err);
+    // Only show error if we have no cached data
+    if (allPages.length === 0) {
+      showFeedback(shadow, 'Failed to connect to Noteman backend. Check your settings.', 'error');
+    }
+  }
 }
 
 /**
